@@ -3,6 +3,7 @@
 import os
 import glob
 import sqlite3
+from datetime import datetime
 
 
 # Define some module constants
@@ -13,41 +14,73 @@ PATH_DAT = os.getenv('XDG_DATA_HOME', PATH_DAT_DEFAULT)
 PATH_DB = os.path.join(PATH_DAT, 'store.db')
 
 
-class DB(object):
+class DB(sqlite3.Connection):
+
+    path_db = PATH_DB
+    dtfmt = '%Y-%m-%d %H:%M'
 
     def __init__(self):
-        self._conn = self.connect(PATH_DB)
-
-    @property
-    def conn(self):
-        """Current, active SQLite3 API connection object."""
-        return self._conn
-
-    def connect(self, fpath):
-        """Return connection object for the database at fpath."""
-
-        # Check the database is actually present.
+        # Connection is created on initialisation. If the database
+        # file isn't present already, create the directory structure
+        # and before initialising, then create the schema.
+        fpath = self.path_db
         if not os.path.isfile(fpath):
-            conn = self.create(fpath)
+            # mkdir -p
+            os.makedirs(os.path.dirname(fpath), exist_ok=True)
+            super().__init__(fpath)
+            self.create()
         else:
-            conn = sqlite3.connect(fpath)
+            super().__init__(fpath)
 
-        return conn
+    def __exit__(self, type, value, traceback):
+        # sqlite3.Connection isn't closed on exit.
+        self.commit()
+        self.close()
 
-    def create(self, fpath):
-        """Create database and return connection."""
-        os.makedirs(os.path.dirname(fpath), exist_ok=True) # mkdir -p
-        conn = sqlite3.connect(fpath) # Implicitly creates a DB file.
-
+    def create(self):
+        """Create database schema."""
         # Fetch the CREATE TABLE statements from source and execute
         # them via the db connection.
-        for match in glob.glob(os.path.join(PATH_SQL, 'create*.sql')):
-            with open(match, 'r') as f:
-                sql = f.read()
-            conn.execute(sql)
-            conn.commit()
+        file_list = sorted(
+            glob.glob(os.path.join(PATH_SQL, 'create*.sql')),
+            key=lambda sql: 1 if 'vw' in sql else 0
+        )
 
-        return conn
+        for path in file_list:
+            with open(path, 'r') as f:
+                sql = f.read()
+            self.execute(sql)
+        self.commit()
+
+    def insert_quota(self, pydt, remaining, total):
+        """Store usage/quota at a given time."""
+        self.execute("BEGIN TRANSACTION")
+        try:
+            self._insert_quota_history(pydt, remaining)
+            self._insert_quota_monthly(pydt, total)
+        except:
+            self.execute("ROLLBACK")
+
+    def _insert_quota_history(self, pydt, remaining):
+        dbdt = self.pydt_to_dbdt(pydt)
+        self.execute(
+            """
+            INSERT INTO quota_history
+            VALUES (?, ?)
+            """,
+            (dbdt, remaining)
+        )
+
+    def _insert_quota_monthly(self, pydt, total):
+        month_start = datetime(pydt.year, pydt.month, 1)
+        dbdt = self.pydt_to_dbdt(month_start)
+        self.execute(
+            """
+            INSERT INTO quota_monthly
+            VALUES (?, ?)
+            """,
+            (dbdt, total)
+        )
 
     # WIP
     #def dump(self, fpath):
@@ -59,9 +92,9 @@ class DB(object):
     #            fh.write(record)
     #    fh.close()
 
-    def lstable(self):
-        """List tables in the database."""
-        cursor = self.conn.execute(
+    def tables(self):
+        """Return tuple of tables in the database."""
+        cursor = self.execute(
             """
             SELECT name
             FROM sqlite_master
@@ -69,4 +102,18 @@ class DB(object):
             ORDER BY name
             """
         )
-        return cursor.fetchall()
+        return tuple(
+            table
+            for tup in cursor.fetchall()
+            for table in tup
+        )
+
+    @classmethod
+    def pydt_to_dbdt(cls, pydt):
+        """Convert a py datetime obj. to a SQLite-friendly string."""
+        return pydt.strftime(cls.dtfmt)
+
+    @classmethod
+    def dbdt_to_pydt(cls, dbdt):
+        """Convert a SQLite datetime string to a py datetime obj."""
+        return datetime.strptime(dbdt, cls.dtfmt)
