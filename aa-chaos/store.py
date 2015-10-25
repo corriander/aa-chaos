@@ -25,8 +25,9 @@ class DB(sqlite3.Connection):
         # and before initialising, then create the schema.
         fpath = self.path_db
         if not os.path.isfile(fpath):
-            # mkdir -p
-            os.makedirs(os.path.dirname(fpath), exist_ok=True)
+            if fpath != ':memory:':
+                # mkdir -p
+                os.makedirs(os.path.dirname(fpath), exist_ok=True)
             super().__init__(fpath)
             self.create()
         else:
@@ -59,13 +60,14 @@ class DB(sqlite3.Connection):
             self._insert_quota_history(pydt, remaining)
             self._insert_quota_monthly(pydt, total)
         except:
-            self.execute("ROLLBACK")
+            self.rollback()
+            raise
 
     def _insert_quota_history(self, pydt, remaining):
         dbdt = self.pydt_to_dbdt(pydt)
         self.execute(
             """
-            INSERT INTO quota_history
+            INSERT OR IGNORE INTO quota_history
             VALUES (?, ?)
             """,
             (dbdt, remaining)
@@ -76,7 +78,7 @@ class DB(sqlite3.Connection):
         dbdt = self.pydt_to_dbdt(month_start)
         self.execute(
             """
-            INSERT INTO quota_monthly
+            INSERT OR IGNORE INTO quota_monthly
             VALUES (?, ?)
             """,
             (dbdt, total)
