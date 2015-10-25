@@ -8,9 +8,8 @@ from datetime import datetime
 from collections import namedtuple
 
 from ddt import data, unpack, ddt as DDT
-from store import DB
 
-Insert = namedtuple('Insert', 'table, rowid')
+from aachaos.store import DB
 
 
 @DDT
