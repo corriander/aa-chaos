@@ -1,5 +1,5 @@
-aa-chaos
-========
+aachaos
+=======
 
 Simple utility for pulling down Andrew & Arnolds ISP line info from
 their [Chaos API](http://aa.net.uk/support-chaos.html).
