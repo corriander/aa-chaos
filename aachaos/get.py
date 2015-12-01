@@ -1,13 +1,16 @@
 """Module facilitates fetching account data into a simplified form.
-
-Acts as an adapter to the (at time of writing: changing) chaos API.
 """
+# TODO: Encapsulate fetch and storage
 
 import os
-import requests
 import xml.etree.ElementTree as ET
 from collections import namedtuple
 from datetime import datetime
+
+import pandas
+import requests
+
+import aachaos.store
 
 # How to derive this in ElementTree from the source?
 URL_CHAOS = 'https://chaos.aa.net.uk/'
@@ -22,6 +25,10 @@ PATH_CFG = os.getenv('XDG_CONFIG_HOME', PATH_CFG_DEFAULT)
 Quota = namedtuple('Quota', 'tstamp, rem, tot')
 
 class LineInfo(object):
+    """Adapter for the aa.net.uk clueless API.
+
+    The API is subject to change at the time of writing.
+    """
 
     def __init__(self, user, passwd):
         self.xml = xml = self.fetch(user, passwd)
@@ -77,6 +84,21 @@ class LineInfo(object):
             return cls(obj.user, obj.passwd)
 
 
+class DB(aachaos.store.DB):
+    """Extends `store.DB` with data retrieval methods."""
+
+    def select_from_quota_vw(self):
+        """Return contents of `quota_vw` as a pandas DataFrame."""
+        cursor = self.execute("SELECT * FROM quota_vw")
+        records = cursor.fetchall()
+
+        column_names = [tup[0] for tup in cursor.description]
+        df = pandas.DataFrame.from_records(records,
+                                           columns=column_names)
+        df['timestamp'] = pandas.DatetimeIndex(df['timestamp'])
+        return df.set_index('timestamp')
+
+
 class Credentials(object):
     """Encapsulate authorisation/credentials functionality.
 
@@ -115,3 +137,32 @@ class Credentials(object):
         else:
             with open(self.auth_path, 'r') as f:
                 return tuple(f.readline().strip().split(':'))
+
+
+class History(object):
+    """Load quota history from `quota_vw`.
+
+    Provides panda DataFrame manipulations via properties.
+    """
+
+    units = {
+        'GiB' : 1 / (1024 ** 3),
+        'GB' : 1 / (1000 ** 3),
+        'B' : 1
+    }
+
+    def __init__(self):
+        self.db = DB()
+
+    def quota(self, units='GB'):
+        """The monthly quota (pandas TimeSeries)."""
+        unitlu = self.units
+        df = self.db.select_from_quota_vw()
+        return df.total.resample('1M', kind='period') * unitlu[units]
+
+    def usage(self, units='GB'):
+        """Quota remainder (pandas TimeSeries)."""
+        unitlu = self.units
+        df = self.db.select_from_quota_vw()
+        return df.remaining * unitlu[units]
+
