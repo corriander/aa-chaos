@@ -7,8 +7,12 @@ import xml.etree.ElementTree as ET
 from collections import namedtuple
 from datetime import datetime
 
+import numpy
 import pandas
 import requests
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 import aachaos.store
 
@@ -21,6 +25,9 @@ PATH_CFG_DEFAULT = os.path.join(
     os.path.basename(os.path.dirname(__file__))
 )
 PATH_CFG = os.getenv('XDG_CONFIG_HOME', PATH_CFG_DEFAULT)
+
+# Configure plotting style
+mpl.style.use('ggplot')
 
 Quota = namedtuple('Quota', 'tstamp, rem, tot')
 
@@ -166,3 +173,34 @@ class History(object):
         df = self.db.select_from_quota_vw()
         return df.remaining * unitlu[units]
 
+    def plot_this_month(self, fpath=None):
+        usage = self.usage('GB')
+        quota = self.quota('GB')
+        this_month = pandas.Period(datetime.today().strftime('%Y-%m'))
+        next_month = this_month + 1
+        this_quota = quota[this_month]
+
+        # Strip the values outside of this month.
+        usage = usage[usage.index >= this_month.start_time]
+        ts_actual_usage = usage[usage.index < next_month.start_time]
+
+        ts_linear_usage = pandas.Series(
+           numpy.nan,
+           index=pandas.DatetimeIndex(
+               start=this_month.start_time,
+               end=next_month.start_time,
+               freq='H'
+           )
+        )
+        ts_linear_usage[0] = this_quota
+        ts_linear_usage[-1] = 0
+        ts_linear_usage = ts_linear_usage.interpolate()
+
+        fig, axes = plt.subplots()
+        ts_linear_usage.plot(ax=axes)
+        ts_actual_usage.plot(ax=axes)
+
+        if fpath is None:
+            plt.show()
+        else:
+            plt.savefig(fpath)
