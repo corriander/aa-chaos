@@ -185,8 +185,7 @@ class TestDB(unittest.TestCase):
         with DB() as db:
             tables = db.tables()
 
-        self.assertEqual(len(tables), 3)
-        # NOTE: assertItemsEqual replaces by assertCountEqual in Py3.2
+        # NOTE: assertItemsEqual replaced by assertCountEqual in Py3.2
         self.assertCountEqual(
             tables,
             ('quota_history', 'quota_monthly')
