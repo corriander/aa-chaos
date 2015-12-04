@@ -55,7 +55,8 @@ class LineInfo(object):
     def parse(self, xml):
         """Parse line information contained in an XML string.
 
-        Method stores the content in local attributes.
+        Method stores the content in local attributes (currently
+        limited to a Quota object assigned to `_quota`).
         """
         root = ET.fromstring(xml)
 
