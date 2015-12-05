@@ -7,7 +7,7 @@ import tempfile
 from datetime import datetime
 from collections import namedtuple
 
-from mock import patch
+from unittest.mock import patch
 from ddt import data, unpack, ddt as DDT
 import pandas
 
@@ -72,7 +72,7 @@ class TestDB(unittest.TestCase):
         """Returns contents of `quota_vw` as a DataFrame."""
         df = self.db.select_from_quota_vw()
         self.assertIsInstance(df, pandas.DataFrame)
-        self.assertEqual(len(df), 4)
+        self.assertEqual(len(df), 68)
 
 
 @patch('aachaos.get.DB.select_from_quota_vw')
