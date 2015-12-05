@@ -26,16 +26,16 @@ PATH_CFG_DEFAULT = os.path.join(
 )
 PATH_CFG = os.getenv('XDG_CONFIG_HOME', PATH_CFG_DEFAULT)
 
-# Configure plotting style
-mpl.style.use('ggplot')
-
 Quota = namedtuple('Quota', 'tstamp, rem, tot')
+
 
 class LineInfo(object):
     """Adapter for the aa.net.uk clueless API.
 
     The API is subject to change at the time of writing.
     """
+
+    class AuthenticationError(Exception): pass
 
     def __init__(self, user, passwd):
         self.xml = xml = self.fetch(user, passwd)
@@ -50,6 +50,10 @@ class LineInfo(object):
         response = requests.get('{}info'.format(URL_CHAOS),
                                 auth=(user, passwd))
         xml = response.text
+        # TODO: Move the following into own function when refactoring.
+        root = ET.fromstring(xml)
+        if root.get('error'):
+            raise self.AuthenticationError("%s/%s" % (user, passwd))
         return xml
 
     def parse(self, xml):
@@ -59,8 +63,6 @@ class LineInfo(object):
         limited to a Quota object assigned to `_quota`).
         """
         root = ET.fromstring(xml)
-
-        # TODO: Build in authentication failure detection
 
         bb_lines = root.findall(
             './/{{{}}}broadband'.format(URL_CHAOS)

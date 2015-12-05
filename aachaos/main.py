@@ -26,15 +26,12 @@ class Main(object):
         specified on invocation. If either value is None,
         `get.Credentials` is used to retrieve stored user:pass combo.
         """
-        auth = args.user, args.passwd
-        if tuple(filter(None, auth)) == auth:
-            cred = get.Credentials(*auth)
-            auth = cred.user, cred.passwd
-        self.user, self.passwd = auth
-
         if not self._sufficient_fetch_interval():
             print("Insufficient time has elapsed.")
             return
+
+        credentials = get.Credentials(args.user, args.passwd)
+        self.user, self.passwd = credentials.user, credentials.passwd
 
         quota = self._get_quota()
 
