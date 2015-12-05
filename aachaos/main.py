@@ -1,3 +1,10 @@
+"""Module provides a simple command-line interface.
+
+Satisfies the following use-cases:
+
+  - Updating the local data store.
+  - Retrieving data from the local data store.
+"""
 import os
 import argparse
 from datetime import datetime
@@ -8,24 +15,23 @@ T_ELAPSED_MIN = 10800 # s, minimum elapsed time.
 
 
 class Main(object):
-
-    def __init__(self, auth=()):
-        """Accepts an optional 2-tuple containing user and pass.
-
-        If credentials are not provided, they are fetched via
-        `get.Credentials`.
-        """
-        if auth:
-            self.user, self.passwd = auth
-        else:
-            auth =  get.Credentials(*auth)
-            self.user, self.passwd = auth.user, auth.passwd
-
     # ----------------------------------------------------------------
     # External methods / use cases
     # ----------------------------------------------------------------
-    def update(self):
-        """Retrieve quota snapshot from API and store locally."""
+    def update(self, args):
+        """Retrieve quota snapshot from API and store locally.
+
+        Accepts an arguments object from argparse. argparse sets the
+        default values (user=None, passwd=None) or passes the values
+        specified on invocation. If either value is None,
+        `get.Credentials` is used to retrieve stored user:pass combo.
+        """
+        auth = args.user, args.passwd
+        if tuple(filter(None, auth)) == auth:
+            cred = get.Credentials(*auth)
+            auth = cred.user, cred.passwd
+        self.user, self.passwd = auth
+
         if not self._sufficient_fetch_interval():
             print("Insufficient time has elapsed.")
             return
@@ -35,6 +41,13 @@ class Main(object):
         db = store.DB()
         db.insert_quota(*quota)
         db.commit()
+
+    def data(self, args=None):
+        """Retrieve data from local store."""
+        # TODO: maybe allow optional file arg instead of stdout.
+        # TODO: fix truncation of long data frames.
+        db = get.DB()
+        print(db.select_from_quota_vw())
 
     # ----------------------------------------------------------------
     # Internal methods
@@ -62,15 +75,40 @@ class Main(object):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
+
+    # Start by instantiating the main class so we can bind its methods
+    main = Main()
+
+    # Top level parser (main, named after this module)
+    parser = argparse.ArgumentParser(prog='main')
+    subparsers = parser.add_subparsers()
+    # no top level args
+
+    # Parser for the 'update' subcommand
+    parser_update = subparsers.add_parser(
+        'update',
         description="Fetch internet usage/quota."
     )
-    parser.add_argument('--user', dest='user')
-    parser.add_argument('--pass', dest='passwd')
+    parser_update.add_argument('--user', dest='user', type=str,
+                               default=None)
+    parser_update.add_argument('--pass', dest='passwd', type=str,
+                               default=None)
+    parser_update.set_defaults(func=main.update)
+
+    # Parser for the 'data' subcommand
+    parser_data = subparsers.add_parser(
+        'data',
+        description="Retrieve data from local store."
+    )
+    parser_data.set_defaults(func=main.data)
+    # no args to data
+
+    # Parse the command-line arguments and invoke the relevant bound
+    # method/function with the arguments object (selects appropriate
+    # subparser; yes, this is a bit obtuse).
     args = parser.parse_args()
-    auth = args.user, args.passwd
-    if tuple(filter(None, auth)) == auth:
-        main = Main(auth=auth)
-    else:
-        main = Main()
-    main.update()
+    try:
+        args.func(args)
+    except AttributeError as err:
+        if str(err) == "'Namespace' object has no attribute 'func'":
+            raise RuntimeError("Missing subcommand.")

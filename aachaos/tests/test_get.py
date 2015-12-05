@@ -19,6 +19,7 @@ PATH_MINRESPONSE = os.path.join(
     PATHD_TESTDATA,
     'dummy_minimal_response.xml'
 )
+PATH_TESTDB = os.path.join(PATHD_TESTDATA, 'test_store.db')
 
 class TestLineInfo(unittest.TestCase):
     """Check the functionality of the LineInfo class.
@@ -58,11 +59,9 @@ class TestDB(unittest.TestCase):
     etc.
     """
 
-    path_refdb = os.path.join(PATHD_TESTDATA, 'test_store.db')
-
     # TODO: Use mock for this!
     # TODO: Move to memory?
-    DB.path_db = path_refdb
+    DB.path_db = PATH_TESTDB
 
     def setUp(self):
         # Create a connection to the reference database.

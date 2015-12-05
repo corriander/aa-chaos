@@ -3,9 +3,14 @@
 import unittest
 from unittest.mock import patch
 from datetime import datetime
+from collections import namedtuple
+import contextlib
+import io
 
 import aachaos.main
 import aachaos.get
+from aachaos.tests.test_get import PATH_TESTDB
+
 
 class TestMain(unittest.TestCase):
     """Class is used to provide a command-line based user interface.
@@ -16,7 +21,7 @@ class TestMain(unittest.TestCase):
     """
 
     def setUp(self):
-        pass
+        self.main = aachaos.main.Main()
 
     def tearDown(self):
         pass
@@ -45,9 +50,28 @@ class TestMain(unittest.TestCase):
         mock_call.return_value = quota
         mock_check.return_value = True
 
-        main = aachaos.main.Main(auth=('any user', 'any pass'))
-        main.update()
+        args = namedtuple('Args', 'user, passwd')('a user', 'a pass')
+        self.main.update(args)
         mock_insert.assert_called_with(*quota)
+
+    def test_data(self):
+        """Check data is returned to the shell.
+
+        This function spits out the contents of the `quota_view`
+        table. The `get.DB` method that returns this is mocked to
+        return a constant sample. The data is a pandas dataframe, so
+        this test is configured to reflect this.
+        """
+        aachaos.main.get.DB.db_path = PATH_TESTDB
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            # NOTE: Cannot use pdb in this context.
+            self.main.data()
+            last_row = out.getvalue().splitlines()[-3]
+
+        # We expect the last entry in the test database, which is
+        # currently:
+        self.assertIn('2002-01-01 18:00:00', last_row)
 
     # ----------------------------------------------------------------
     # Internal methods
@@ -65,8 +89,7 @@ class TestMain(unittest.TestCase):
         mock_now.return_value = datetime(2000, 1, 1, 1)
         mock_max.return_value = datetime(2000, 1, 1, 0, 30)
 
-        main = aachaos.main.Main(auth=('any user', 'any pass'))
-        self.assertEqual(main._get_interval(), 30 * 60)
+        self.assertEqual(self.main._get_interval(), 30 * 60)
 
 
 if __name__ == '__main__':
