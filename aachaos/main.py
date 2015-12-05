@@ -3,7 +3,7 @@ import os
 import argparse
 from datetime import datetime
 
-import get, store
+from aachaos import get, store
 
 T_ELAPSED_MIN = 10800 # s, minimum elapsed time.
 

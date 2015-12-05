@@ -1,0 +1,17 @@
+Visualisation
+=============
+
+  - Shaded weekends (look up pandas/mpl date axis formatting).
+  - Log scale for better resolution near the end of the month.
+  - Markers for data points (subtle; less important on regular update
+	on server).
+  - Minor y ticks at 25 or 10, perhaps just in lower 50 GB.
+  - Possible zoomed subplot for lower region (in conjunction with
+	above).
+  - Perhaps a greyed reference curve and coloured real one. Perhaps 
+  	overlaying previous months in less saturated colour.
+  - y-axis label
+  - Fix clipped year on x-axis.
+	
+Make these options / variations. 
+
