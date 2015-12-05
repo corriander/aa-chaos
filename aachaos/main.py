@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 import os
 import argparse
 from datetime import datetime
@@ -7,33 +6,59 @@ from aachaos import get, store
 
 T_ELAPSED_MIN = 10800 # s, minimum elapsed time.
 
-def main(user, passwd):
-    """Download quota and store locally.
 
-    Takes a single argument which may be a file path or a 2-tuple
-    containing username and password strings; only downloads quota if
-    sufficient time has passed since the last fetch (currently 3
-    hours).
-    """
+class Main(object):
 
-    # Pre-requisites
-    ## Database check (TODO: store this in a static file in XDG_DATA)
-    db = store.DB()
-    cursor = db.execute("SELECT max(timestamp) FROM quota_history")
-    max_tstamp = cursor.fetchone()[0]
-    try:
-        t_latest = db.dbdt_to_pydt(max_tstamp)
-        t_elapsed = datetime.now() - t_latest
-        if t_elapsed.total_seconds() < T_ELAPSED_MIN:
+    def __init__(self, auth=()):
+        """Accepts an optional 2-tuple containing user and pass.
+
+        If credentials are not provided, they are fetched via
+        `get.Credentials`.
+        """
+        if auth:
+            self.user, self.passwd = auth
+        else:
+            auth =  get.Credentials(*auth)
+            self.user, self.passwd = auth.user, auth.passwd
+
+    # ----------------------------------------------------------------
+    # External methods / use cases
+    # ----------------------------------------------------------------
+    def update(self):
+        """Retrieve quota snapshot from API and store locally."""
+        if not self._sufficient_fetch_interval():
+            print("Insufficient time has elapsed.")
             return
-    except TypeError as err:
-        if 'Must be str, not None' in str(err):
-            pass
 
-    info = get.LineInfo(user, passwd)
-    db.insert_quota(*info.quota)
-    db.commit()
-    return 0
+        quota = self._get_quota()
+
+        db = store.DB()
+        db.insert_quota(*quota)
+        db.commit()
+
+    # ----------------------------------------------------------------
+    # Internal methods
+    # ----------------------------------------------------------------
+    def _get_quota(self):
+        # Return the current quota info as a get.Quota instance.
+        info = get.LineInfo(self.user, self.passwd)
+        return info.quota
+
+    def _get_interval(self):
+        # Return the time elapsed [s] since the last snapshot stored.
+        db = get.DB()
+        t_latest = db.select_max_timestamp()
+        t_elapsed = self._get_time_now() - t_latest
+        return t_elapsed.total_seconds()
+
+    def _get_time_now(self):
+        return datetime.now()
+
+    def _sufficient_fetch_interval(self):
+        # Be polite: check we're not hammering the API; there's no
+        # point getting it more frequently than every hour.
+        seconds_elapsed = self._get_interval()
+        return seconds_elapsed > T_ELAPSED_MIN
 
 
 if __name__ == '__main__':
@@ -42,26 +67,10 @@ if __name__ == '__main__':
     )
     parser.add_argument('--user', dest='user')
     parser.add_argument('--pass', dest='passwd')
-    #parser.add_argument('--file', dest='fpath')
     args = parser.parse_args()
-
-    #fpath = args.fpath
-    #user_passwd = (args.user, args.passwd)
-    auth = get.Credentials(args.user, args.passwd)
-    #if fpath is not None:
-    #    try:
-    #        #if (oct(os.stat(fpath).st_mode & 0o777) != '600'):
-    #        #    raise Exception("Credential file needs 600 perms")
-    #        #else:
-    #        with open(fpath, 'r') as f:
-    #            auth = tuple(f.readline().strip().split(':'))
-    #    except:
-    #        raise
-
-    #elif all(arg is not None for arg in user_passwd):
-    #    auth = user_passwd
-    #else:
-    #    raise Exception
-
-    #main(*auth)
-    main(auth.user, auth.passwd)
+    auth = args.user, args.passwd
+    if tuple(filter(None, auth)) == auth:
+        main = Main(auth=auth)
+    else:
+        main = Main()
+    main.update()

@@ -106,6 +106,24 @@ class DB(aachaos.store.DB):
         df['timestamp'] = pandas.DatetimeIndex(df['timestamp'])
         return df.set_index('timestamp')
 
+    def select_max_timestamp(self):
+        """Return the largest timestamp in `quota_history`."""
+        cursor = self.execute(
+            """
+            SELECT max(timestamp)
+            FROM quota_history
+            """
+        )
+        # TODO: What if this is a fresh database? Options:
+        #   1. Ensure the database is always primed.
+        #   2. Account for an empty recordset here.
+        # #1 seems most sensible generally, but this hasn't been
+        # implemented yet. It would necessitate running an update on
+        # "installation" (which is reasonable).
+        max_tstamp = cursor.fetchone()[0]
+        t_latest = self.dbdt_to_pydt(max_tstamp)
+        return t_latest
+
 
 class Credentials(object):
     """Encapsulate authorisation/credentials functionality.
