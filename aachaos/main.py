@@ -9,7 +9,7 @@ import os
 import argparse
 from datetime import datetime
 
-from aachaos import get, store
+from aachaos import get, store, vis
 
 T_ELAPSED_MIN = 10800 # s, minimum elapsed time.
 
@@ -46,6 +46,11 @@ class Main(object):
         # http://stackoverflow.com/q/19124601
         db = get.DB()
         print(db.select_from_quota_vw())
+
+    def plot(self, args):
+        """Plot usage data for the current month."""
+        plotter = vis.Plotter()
+        plotter.plot_month(month=args.month, fpath=args.file)
 
     # ----------------------------------------------------------------
     # Internal methods
@@ -100,6 +105,21 @@ if __name__ == '__main__':
     )
     parser_data.set_defaults(func=main.data)
     # no args to data
+
+    # Parser for the 'plot' subcommand
+    parser_plot = subparsers.add_parser(
+        'plot',
+        description="Plot data in local store for this month."
+    )
+    parser_plot.add_argument(
+        '--month',
+        dest='month',
+        type=str,
+        default=datetime.today().strftime('%Y-%m')
+    )
+    parser_plot.add_argument('--file', dest='file', type=str,
+                             default=None)
+    parser_plot.set_defaults(func=main.plot)
 
     # Parse the command-line arguments and invoke the relevant bound
     # method/function with the arguments object (selects appropriate

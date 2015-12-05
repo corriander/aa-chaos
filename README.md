@@ -5,7 +5,7 @@ Simple utility for pulling down Andrew & Arnolds ISP line info from
 their [Chaos API](http://aa.net.uk/support-chaos.html).
 
 This is geared towards a simple **Home::1** service configuration
-(100/200 GiB, single line) and a mini-project for my own purposes
+(100/200 GB, single line) and a mini-project for my own purposes
 (inc. a sandpit for trying out some new things); no guarantees about
 functionality or completeness!
 
@@ -46,36 +46,45 @@ TODO
   - Shift database interface into new `db.py` so the following
 	architecture can be implemented cleanly:
 
-		       +-----+          +-----+
-		       |     |          | API |
-		       | DB  |          |     |
-		       +-+-^-+          +--+--+
-		         | |               |
-		         | |               |
-		+--------v-+----------+    |
-		|     db interface    |    |
-		+----+-------------^--+    |
-		     |             |       |
-		     |             |       |
-		     |       +-----+--+    |
-		     |       | store  |    |
-		     |       +-----+--+    |
-		     |             |       |
-		     |             |       |
-		+----v-------------+-------v-----+
-		|             get                |
-		+--------------------------------+
+				       +-----+          +-----+
+				       |     |          | API |
+				       | DB  |          |     |
+				       +-+-^-+          +--+--+
+				         | |               |
+				         | |               |
+				+--------v-+----------+    |
+				|     db interface    |    |
+				+----+-------------^--+    |
+				     |             |       |
+				     |             |       |
+				     |       +-----+--+    |
+				     |       | store  |    |
+				     |       +-----^--+    |
+				     |             |       |
+				     |             |       |
+				+----v-------------+-------v-----+
+				|             get                |
+				+----+-------------+-------^-----+
+				     |             |       |
+					 |             |       |
+				+----v----+        |       |
+		gfx	<---|   vis   |        |       |
+				+----+----+        |       |
+				     |             |       |
+					 |             |       |
+				+----v-------------v-------+-----+
+				|             main               |
+				+--------------------------------+
 
-  - Add a separate `vis` module at the same level as `get`, with
-	`main` adapted to provide access to both via defined "routes"
-	(fetch and store from API, fetch from database).  Note that we
-	should generate the visualisation when fetching from the API as
+	It's similar now, but with `store` providing the database
+	interface. This is sufficient but not quite as semantically tight.
+  - We should generate the visualisation when fetching from the API as
 	there's no point doing it at other times (or, alternatively, only
 	generate it if it hasn't been generated since the last fetch...
 	maybe less intensive on the server).
   - Dependencies
   - Install / package
-  - Proper [entry point][todo_entrypoint]
+  - Proper [entry point][todo_entrypoint] (refactor main slightly).
 	
 	
 [databurndown]: https://github.com/sammachin/databurndown.git
