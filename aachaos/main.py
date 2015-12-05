@@ -43,6 +43,7 @@ class Main(object):
         """Retrieve data from local store."""
         # TODO: maybe allow optional file arg instead of stdout.
         # TODO: fix truncation of long data frames.
+        # http://stackoverflow.com/q/19124601
         db = get.DB()
         print(db.select_from_quota_vw())
 
