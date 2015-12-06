@@ -43,7 +43,7 @@ class Main(object):
         db.commit()
 
         # Generate the latest figure as a side-effect.
-        Args = namedtuple('Args', 'month, fpath')
+        Args = namedtuple('Args', 'month, file')
         args = Args(datetime.today().strftime('%Y-%m'), self.path_fig)
         self.plot(args)
 
