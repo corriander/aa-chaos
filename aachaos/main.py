@@ -8,6 +8,7 @@ Satisfies the following use-cases:
 import os
 import argparse
 from datetime import datetime
+from collections import namedtuple
 
 from aachaos import get, store, vis
 
@@ -15,6 +16,8 @@ T_ELAPSED_MIN = 10800 # s, minimum elapsed time.
 
 
 class Main(object):
+
+    path_fig = '/tmp/aachaos_usage_monitor.svg'
     # ----------------------------------------------------------------
     # External methods / use cases
     # ----------------------------------------------------------------
@@ -38,6 +41,11 @@ class Main(object):
         db = store.DB()
         db.insert_quota(*quota)
         db.commit()
+
+        # Generate the latest figure as a side-effect.
+        Args = namedtuple('Args', 'month, fpath')
+        args = Args(datetime.today().strftime('%Y-%m'), self.path_fig)
+        self.plot(args)
 
     def data(self, args=None):
         """Retrieve data from local store."""
