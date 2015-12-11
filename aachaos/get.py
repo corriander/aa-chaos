@@ -1,7 +1,5 @@
 """Module facilitates fetching account data into a simplified form.
 """
-# TODO: Encapsulate fetch and storage
-
 import os
 import xml.etree.ElementTree as ET
 from collections import namedtuple
@@ -12,9 +10,7 @@ import requests
 
 import aachaos.store
 
-# How to derive this in ElementTree from the source?
 URL_CHAOS = 'https://chaos.aa.net.uk/'
-
 PATH_CFG_DEFAULT = os.path.join(
     os.getenv('HOME'),
     '.config',
@@ -100,16 +96,19 @@ class DB(aachaos.store.DB):
 
         column_names = [tup[0] for tup in cursor.description]
         df = pd.DataFrame.from_records(records,
-                                           columns=column_names)
+                                       columns=column_names)
         df['timestamp'] = pd.DatetimeIndex(df['timestamp'])
         return df.set_index('timestamp')
 
-    def select_max_timestamp(self):
-        """Return the largest timestamp in `quota_history`."""
+    def select_last_from_quota_vw(self):
         cursor = self.execute(
             """
-            SELECT max(timestamp)
-            FROM quota_history
+            SELECT timestamp, percent
+            FROM quota_vw
+            WHERE timestamp = (
+                SELECT max(timestamp)
+                FROM quota_vw
+            )
             """
         )
         # TODO: What if this is a fresh database? Options:
@@ -118,9 +117,8 @@ class DB(aachaos.store.DB):
         # #1 seems most sensible generally, but this hasn't been
         # implemented yet. It would necessitate running an update on
         # "installation" (which is reasonable).
-        max_tstamp = cursor.fetchone()[0]
-        t_latest = self.dbdt_to_pydt(max_tstamp)
-        return t_latest
+        pair = cursor.fetchone()
+        return (self.dbdt_to_pydt(pair[0]), pair[1])
 
 
 class Credentials(object):

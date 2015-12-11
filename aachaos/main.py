@@ -10,9 +10,11 @@ import argparse
 from datetime import datetime
 from collections import namedtuple
 
+import pandas as pd
+
 from aachaos import get, store, vis
 
-T_ELAPSED_MIN = 10800 # s, minimum elapsed time.
+T_ELAPSED_DEFAULT = 10800 # s, minimum elapsed time.
 
 
 class Main(object):
@@ -68,21 +70,59 @@ class Main(object):
         info = get.LineInfo(self.user, self.passwd)
         return info.quota
 
-    def _get_interval(self):
-        # Return the time elapsed [s] since the last snapshot stored.
-        db = get.DB()
-        t_latest = db.select_max_timestamp()
-        t_elapsed = self._get_time_now() - t_latest
-        return t_elapsed.total_seconds()
+    def _get_minimum_interval(self, remaining_time, remaining_quota):
+        # Minimum interval drops towards the end of the month.
+        return min(
+            self.__get_minimum_interval_time(remaining_time),
+            self.__get_minimum_interval_quota(remaining_quota)
+        )
+
+    def __get_minimum_interval_time(self, remaining_time):
+        if remaining_time < 1 * 24 * 3600:
+            return 3600
+        elif remaining_time < 2 * 24 * 3600:
+            return 2 * 3600
+        else:
+            return T_ELAPSED_DEFAULT
+
+    def __get_minimum_interval_quota(self, remaining_quota):
+        x = remaining_quota
+        if x < 5.0:
+            return 3600
+        elif x < 10.0:
+            return 2 * 3600
+        else:
+            return T_ELAPSED_DEFAULT
+
+    @staticmethod
+    def _get_time_left(now):
+        """Return time left in period."""
+        delta = pd.Period(now.strftime('%Y-%m')).end_time - now
+        return delta.total_seconds()
 
     def _get_time_now(self):
+        # Required for mocking; can't mock datetime.
         return datetime.now()
 
+    def _get_latest(self):
+        """Get time and percent remaining from latest entry."""
+        db = get.DB()
+        time, rem = db.select_last_from_quota_vw()
+        return (time, rem)
+
+    # TODO: Change name to the less verbose 'can_update'
     def _sufficient_fetch_interval(self):
-        # Be polite: check we're not hammering the API; there's no
-        # point getting it more frequently than every hour.
-        seconds_elapsed = self._get_interval()
-        return seconds_elapsed > T_ELAPSED_MIN
+        # Be polite: we only need to check at most every hour, and for
+        # most of the month, less than that.
+
+        # Get basic stats from the last update and the current time.
+        now = datetime.now()
+        time, rem = self._get_latest()
+
+        # Evaluate whether we have crossed the relevant thresholds
+        t_elapsed = (now - time).total_seconds()
+        t_left = self._get_time_left(now)
+        return t_elapsed >  self._get_minimum_interval(t_left, rem)
 
 
 if __name__ == '__main__':

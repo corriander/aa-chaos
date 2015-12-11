@@ -73,6 +73,14 @@ class TestDB(unittest.TestCase):
         self.assertIsInstance(df, pandas.DataFrame)
         self.assertEqual(len(df), 68)
 
+    def test_select_last_from_quota_vw(self):
+        """Return the latest timestamp and percent value."""
+        t = self.db.select_last_from_quota_vw()
+        self.assertIsInstance(t, tuple)
+        self.assertEqual(len(t), 2)
+        self.assertEqual(t[0], datetime(2002, 1, 1, 18))
+        self.assertEqual(t[1], 98)
+
 
 @patch('aachaos.get.DB.select_from_quota_vw')
 class TestHistory(unittest.TestCase):
@@ -128,6 +136,7 @@ class TestHistory(unittest.TestCase):
         history = History()
         usage = history.usage(units='B')
         self.assertIsInstance(usage, pandas.Series)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -2,16 +2,19 @@
 
 import unittest
 from unittest.mock import patch
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import namedtuple
 import contextlib
 import io
+
+from ddt import ddt as DDT, data, unpack
 
 import aachaos.main
 import aachaos.get
 from aachaos.tests.test_get import PATH_TESTDB
 
 
+@DDT
 class TestMain(unittest.TestCase):
     """Class is used to provide a command-line based user interface.
 
@@ -88,18 +91,23 @@ class TestMain(unittest.TestCase):
     # ----------------------------------------------------------------
     # _get_quota is not tested, this is a simple wrapper around
     # `get.Lineinfo`.
-    # _sufficient_fetch_interval is not tested. This is a simple
-    # wrapper around a comparison between the time elapsed (in
-    # seconds) with a constant.
-    @patch('aachaos.main.get.DB.select_max_timestamp')
-    @patch('aachaos.main.Main._get_time_now')
-    def test__get_interval(self, mock_now, mock_max):
-        """Check interval evaluated between last stored quota and now.
-        """
-        mock_now.return_value = datetime(2000, 1, 1, 1)
-        mock_max.return_value = datetime(2000, 1, 1, 0, 30)
+    @data(
+        (2.5, 15, 3), (2.5, 7, 2), (2.5, 3, 1),
+        (1.5, 15, 2), (1.5, 7, 2), (1.5, 3, 1),
+        (0.5, 15, 1), (0.5, 7, 1), (0.5, 3, 1)
+    )
+    @unpack
+    def test__get_minimum_interval(self, days, pc, interval):
+        """Check interval changes towards the end of the month.
 
-        self.assertEqual(self.main._get_interval(), 30 * 60)
+        Thresholds are 2 days or 10%, below which it increases in
+        frequency to 2-hourly, followed by hourly after 1 day or 5%.
+
+        Interval is measured in seconds.
+        """
+        main = self.main
+        func = main._get_minimum_interval
+        self.assertEqual(func(days*24*3600, pc), interval*3600)
 
 
 if __name__ == '__main__':
