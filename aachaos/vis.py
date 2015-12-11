@@ -1,24 +1,29 @@
-"""Module facilitates fetching account data into a simplified form.
+"""Module provides plotting functionality.
 """
-# TODO: Encapsulate fetch and storage
-
 import os
+import importlib
 from datetime import datetime
 
 import numpy as np
 import pandas as pd
 
 import matplotlib as mpl
-import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
 
 import aachaos.get
 
-# Configure plotting style
-mpl.style.use('ggplot')
-
 
 class Plotter(object):
+
+    def _import_pyplot(self, interactive=True):
+        if interactive:
+            # Use default backend
+            pass
+        else:
+            mpl.use('agg')
+
+        # Configure plotting style and assign module to attribute.
+        self.plt =  importlib.import_module('matplotlib.pyplot')
+        mpl.style.use('ggplot')
 
     # ----------------------------------------------------------------
     # External methods
@@ -40,6 +45,8 @@ class Plotter(object):
                 Output file path (extension controls format). If not
                 specified, default behaviour is to display the figure.
         """
+        self._import_pyplot(fpath is None)
+
         # TODO: Separate data generation from plotting.
         month = pd.Period(month)
         next_month = month + 1
@@ -73,7 +80,7 @@ class Plotter(object):
             a = usage_linear[usage_linear.index == month.start_time]
             usage = pd.concat((a, usage))
 
-        fig, axes = plt.subplots()
+        fig, axes = self.plt.subplots()
         usage_linear.plot(ax=axes, color='0.6', linestyle='--')
         self._shade_weekends(axes)
 
@@ -93,9 +100,9 @@ class Plotter(object):
     def _create(self, fpath=None):
         # Thin wrapper around either savefig or show
         if fpath is not None and isinstance(fpath, str):
-            plt.savefig(fpath)
+            self.plt.savefig(fpath)
         else:
-            plt.show()
+            self.plt.show()
 
     def _shade_weekends(self, axes):
         # TODO: Work out how to avoid shading the white lines on the

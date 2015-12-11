@@ -43,9 +43,9 @@ class Main(object):
         db.commit()
 
         # Generate the latest figure as a side-effect.
-        Args = namedtuple('Args', 'month, file')
-        args = Args(datetime.today().strftime('%Y-%m'), self.path_fig)
-        self.plot(args)
+        plotter = vis.Plotter()
+        plotter.plot_month(datetime.today().strftime('%Y-%m'),
+                           self.path_fig)
 
     def data(self, args=None):
         """Retrieve data from local store."""

@@ -26,11 +26,16 @@ class TestMain(unittest.TestCase):
     def tearDown(self):
         pass
 
+    @patch('aachaos.main.vis.Plotter.plot_month')
     @patch('aachaos.main.Main._sufficient_fetch_interval')
     @patch('aachaos.main.Main._get_quota')
     @patch('aachaos.main.store.DB.insert_quota')
-    def test_update(self, mock_insert, mock_call, mock_check):
+    def test_update(self, mock_insert, mock_call, mock_check,
+                    mock_plot):
         """Check an update is fetched from the API and stored.
+
+        Additionally, a side-effect is to generate a plot during this
+        procedure.
         """
         # Database, API and interval check are mocked.
         #
@@ -42,6 +47,7 @@ class TestMain(unittest.TestCase):
         #     called correctly.
         #	- We don't want to actually check for the latest fetch so
         #     avoid this entirely by mocking the interval check.
+        #   - We don't want to actually plot anything.
         quota = aachaos.get.Quota(
             datetime.today(),
             12345678987,
@@ -53,6 +59,10 @@ class TestMain(unittest.TestCase):
         args = namedtuple('Args', 'user, passwd')('a user', 'a pass')
         self.main.update(args)
         mock_insert.assert_called_with(*quota)
+        mock_plot.assert_called_with(
+            datetime.today().strftime('%Y-%m'),
+            self.main.path_fig
+        )
 
     def test_data(self):
         """Check data is returned to the shell.
