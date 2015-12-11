@@ -1,14 +1,10 @@
 import tornado.ioloop
 import tornado.web
 
-from aachaos.get import History
-
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
-        path = '/tmp/usage.svg'
-        # This should be spat out every time a new datapoint is
-        # collected, not on request.
-        History().plot_this_month(path)
+        # TODO: tsk tsk, hardcoding.
+        path = '/tmp/aachaos_usage_monitor.svg'
         self.render(path)
 
 def make_app():
