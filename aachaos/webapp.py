@@ -1,3 +1,5 @@
+import os
+
 import tornado.ioloop
 import tornado.web
 
@@ -22,7 +24,16 @@ def make_app():
     ])
 
 
+def create_figure():
+    plotter = vis.Plotter()
+    plotter.plot_month()
+
+
 if __name__ == "__main__":
+    # Ensure the figure is actually present (e.g. on startup).
+    if not os.path.isfile(FIG_PATH):
+        create_figure()
+
     app = make_app()
     app.listen(8889)
     tornado.ioloop.IOLoop.current().start()
