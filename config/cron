@@ -1,0 +1,2 @@
+0,15,30,45 * * * * $HOME/.local/bin/aachaos.sh 
+0,15,30,45 * * * * $HOME/.local/bin/aachaos_webui.sh 2>/dev/null
