@@ -90,7 +90,9 @@ class DB(aachaos.store.DB):
 
     def select_from_quota_vw(self):
         """Return contents of `quota_vw` as a pd DataFrame."""
-        cursor = self.execute("SELECT * FROM quota_vw")
+        cursor = self.execute(
+            "SELECT * FROM quota_vw ORDER BY timestamp ASC"
+        )
         records = cursor.fetchall()
 
         column_names = [tup[0] for tup in cursor.description]
