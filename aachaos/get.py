@@ -9,14 +9,10 @@ import pandas as pd
 import requests
 
 import aachaos.store
+from aachaos.config import settings
 
 URL_CHAOS = 'https://chaos.aa.net.uk/'
-PATH_CFG_DEFAULT = os.path.join(
-    os.getenv('HOME'),
-    '.config',
-    os.path.basename(os.path.dirname(__file__))
-)
-PATH_CFG = os.getenv('XDG_CONFIG_HOME', PATH_CFG_DEFAULT)
+
 
 Quota = namedtuple('Quota', 'tstamp, rem, tot')
 
@@ -133,7 +129,7 @@ class Credentials(object):
     class FileNotPresent(RuntimeError): pass
     class FileNotSecure(RuntimeError): pass
 
-    auth_path = os.path.join(PATH_CFG, 'auth')
+    auth_path = os.path.join(settings.xdg_config, __package__, 'auth')
 
     def __init__(self, user=None, passwd=None):
         if self._userpasswd_provided(user, passwd):
