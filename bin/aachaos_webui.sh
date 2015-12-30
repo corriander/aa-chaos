@@ -3,6 +3,6 @@
 
 if [ -z "$(ps -ef | grep '[a]achaos.webapp')" ]
 then
-	cd ~/code/py/aachaos
+	cd $HOME/code/py/aachaos
 	python3 -m aachaos.webapp 2>&1 > /dev/null & 
 fi

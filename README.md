@@ -19,13 +19,18 @@ Install
 > This is a very rough guide, proper installation hasn't been
 > implemented.
 
-Put user credentials in `~/.config/aachaos/auth` (`chmod 600`) in the
-following format:
+	cp config/config.ini ~/.config/aachaos/ # Config file
+	cp bin/* ~/.local/bin/					# Sample scripts
+
+Specify paths for database, figure, etc. in `config.ini` and use
+`config/cron` as a template for the user cron. Put A&A user
+credentials in `~/.config/aachaos/auth` (`chmod 600`) in the following
+format:
 
 	user:password
 
-A database will be created at `~/.local/share/aachaos/store.db` (NB:
-this hasn't been tested, there'll likely be issues here).
+A database will be created at the location specified in the config
+file on the first update.
 
 
 Usage
@@ -33,11 +38,11 @@ Usage
 
 Execute in the project directory via:
 
-	python -m aachaos.main
+	python3 -m aachaos.main
 
 Run tests in the project directory with:
 
-	python -m unittest discover
+	python3 -m unittest discover
 
 
 TODO
