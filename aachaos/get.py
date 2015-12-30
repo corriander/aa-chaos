@@ -14,6 +14,9 @@ from aachaos.config import settings
 URL_CHAOS = 'https://chaos.aa.net.uk/'
 
 
+class DatabaseEmptyException(Exception): pass
+
+
 Quota = namedtuple('Quota', 'tstamp, rem, tot')
 
 
@@ -107,13 +110,12 @@ class DB(aachaos.store.DB):
             )
             """
         )
-        # TODO: What if this is a fresh database? Options:
-        #   1. Ensure the database is always primed.
-        #   2. Account for an empty recordset here.
-        # #1 seems most sensible generally, but this hasn't been
-        # implemented yet. It would necessitate running an update on
-        # "installation" (which is reasonable).
         pair = cursor.fetchone()
+        if pair is None:
+            # Database is empty, probably because it's been relocated
+            # or this is a fresh install. Raise an exception for this
+            # special case.
+            raise DatabaseEmptyException
         return (self.dbdt_to_pydt(pair[0]), pair[1])
 
 

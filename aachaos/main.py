@@ -32,9 +32,13 @@ class Main(object):
         specified on invocation. If either value is None,
         `get.Credentials` is used to retrieve stored user:pass combo.
         """
-        if not self._sufficient_fetch_interval():
-            print("Insufficient time has elapsed.")
-            return
+        try:
+            if not self._sufficient_fetch_interval():
+                print("Insufficient time has elapsed.")
+                return
+        except get.DatabaseEmptyException:
+            # Special case of a new, empty database.
+            pass
 
         credentials = get.Credentials(args.user, args.passwd)
         self.user, self.passwd = credentials.user, credentials.passwd

@@ -11,4 +11,6 @@ FROM
 	INNER JOIN 
 	quota_monthly qm
 	ON datetime(qm.month_start) = datetime(qh.timestamp, 'start of month')
+ORDER BY
+	timestamp DESC
 ;

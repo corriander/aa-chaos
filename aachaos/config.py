@@ -29,4 +29,5 @@ class Settings(configparser.ConfigParser):
                 )
         return string
 
+
 settings = Settings()
