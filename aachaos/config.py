@@ -16,6 +16,9 @@ class Settings(configparser.ConfigParser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.read(self.ini_path)
+        # TODO: Check all paths in the 'Path' section exist.
+        # TODO: Cache a record of the paths in use and remove them if
+        # they are changed.
 
     def get(self, section, option, *args, **kwargs):
         # Overriding __getitem__ on the Section proxy didn't appear to
