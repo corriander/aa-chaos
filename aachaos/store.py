@@ -5,17 +5,12 @@ import glob
 import sqlite3
 from datetime import datetime
 
+from aachaos.config import settings
+
 
 # Define some module constants
 PATH_SQL = os.path.join(os.path.dirname(__file__), 'sql')
-PATH_DAT_DEFAULT = os.path.join(
-    os.getenv('HOME'),
-    '.local',
-    'share',
-    os.path.basename(os.path.dirname(__file__))
-)
-PATH_DAT = os.getenv('XDG_DATA_HOME', PATH_DAT_DEFAULT)
-PATH_DB = os.path.join(PATH_DAT, 'store.db')
+PATH_DB = settings.get('Path', 'Database')
 
 
 class DB(sqlite3.Connection):

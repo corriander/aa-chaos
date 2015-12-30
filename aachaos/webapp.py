@@ -1,10 +1,11 @@
 import tornado.ioloop
 import tornado.web
 
+from aachaos.config import settings
 
-# TODO: fix hardcoding / filename
-FIG_PATH = '/tmp/aachaos_usage_monitor.svg'
-TMP_PATH = '/tmp/aachaos_usage_monitor.tmp.svg'
+
+FIG_PATH = settings.get('Path', 'Figure')
+TMP_PATH = '.'.join(FIG_PATH, 'tmp')
 
 
 class QuasiStaticHandler(tornado.web.StaticFileHandler):

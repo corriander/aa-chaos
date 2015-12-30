@@ -13,13 +13,14 @@ from collections import namedtuple
 import pandas as pd
 
 from aachaos import get, store, vis
+from aachaos.config import settings
 
 T_ELAPSED_DEFAULT = 10800 # s, minimum elapsed time.
 
 
 class Main(object):
 
-    path_fig = '/tmp/aachaos_usage_monitor.svg'
+    path_fig = settings.get('Path', 'Figure')
     # ----------------------------------------------------------------
     # External methods / use cases
     # ----------------------------------------------------------------
