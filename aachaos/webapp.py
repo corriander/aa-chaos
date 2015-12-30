@@ -5,7 +5,7 @@ from aachaos.config import settings
 
 
 FIG_PATH = settings.get('Path', 'Figure')
-TMP_PATH = '.'.join(FIG_PATH, 'tmp')
+TMP_PATH = '.'.join([FIG_PATH, 'tmp'])
 
 
 class QuasiStaticHandler(tornado.web.StaticFileHandler):
