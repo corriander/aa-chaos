@@ -18,10 +18,6 @@ from aachaos.get import BroadbandInfo, Quota, DB, History, Credentials
 
 PATHD_TEST = os.path.dirname(__file__)
 PATHD_TESTDATA = os.path.join(PATHD_TEST, 'data')
-PATH_MINRESPONSE = os.path.join(
-    PATHD_TESTDATA,
-    'dummy_minimal_response.xml'
-)
 PATH_TESTDB = os.path.join(PATHD_TESTDATA, 'test_store.db')
 SAMPLE_BROADBAND_INFO_RESPONSE_PATH = os.path.join(
     PATHD_TESTDATA,
@@ -51,8 +47,6 @@ class TestBroadbandInfo(unittest.TestCase):
 
     BroadbandInfo encapsulates the API's XML response.
     """
-    with open(PATH_MINRESPONSE, 'rb') as f:
-        xml_minimal_response = f.read()
 
     def test___init__(self):
         inst = BroadbandInfo('any user', 'any pass')
@@ -207,8 +201,11 @@ class TestHistory(unittest.TestCase):
 @ddt
 class TestCredentials(unittest.TestCase):
 
-    def setUp(self):
-        Credentials.auth_path = os.path.join(PATHD_TESTDATA, 'auth')
+    @classmethod
+    def setUpClass(cls):
+        auth_path = os.path.join(PATHD_TESTDATA, 'auth')
+        os.chmod(auth_path, 0o600)
+        Credentials.auth_path = auth_path
 
     def test_requests_compatibility(self):
         """Instances are used like requests.auth.HTTPBasicAuth.
