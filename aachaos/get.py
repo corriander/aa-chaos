@@ -25,8 +25,8 @@ class BroadbandInfo(object):
 
     class BadResponse(Exception): pass
 
-    def __init__(self, user=None, passwd=None):
-        self.auth = Credentials(user, passwd)
+    def __init__(self, username=None, password=None):
+        self.auth = Credentials(username, password)
 
     @property
     def quota(self):
@@ -122,30 +122,19 @@ class Credentials(requests.auth.HTTPBasicAuth):
 
     auth_path = os.path.join(settings.xdg_config, __package__, 'auth')
 
-    def __init__(self, user=None, passwd=None):
-        if self._userpasswd_provided(user, passwd):
-            self.user, self.passwd = user, passwd
+    def __init__(self, username=None, password=None):
+        if self._validate_credentials(username, password):
+            self.username, self.password = username, password
         else:
-            self.user, self.passwd = self.retrieve()
-
-    @property
-    def username(self):
-        # requests compatibility; .user is to be deprecated.
-        return self.user
-
-    @property
-    def password(self):
-        # requests compatibility; .passwd is to be deprecated.
-        return self.passwd
+            self.username, self.password = self.retrieve()
 
     @staticmethod
-    def _userpasswd_provided(user, passwd):
-
-        if user is not None and passwd is not None:
+    def _validate_credentials(username, password):
+        if username is not None and password is not None:
             return True
-        elif user is not None:
+        elif username is not None:
             raise ValueError("No password provided.")
-        elif passwd is not None:
+        elif password is not None:
             raise ValueError("No username provided.")
 
     def _auth_file_present(self):
