@@ -28,9 +28,10 @@ class Main(object):
         """Retrieve quota snapshot from API and store locally.
 
         Accepts an arguments object from argparse. argparse sets the
-        default values (user=None, passwd=None) or passes the values
-        specified on invocation. If either value is None,
-        `get.Credentials` is used to retrieve stored user:pass combo.
+        default values (username=None, password=None) or passes the
+        values specified on invocation. If either value is None,
+        `get.Credentials` is used to retrieve stored username:password
+        combo.
         """
         try:
             if not self._sufficient_fetch_interval():
@@ -40,8 +41,9 @@ class Main(object):
             # Special case of a new, empty database.
             pass
 
-        credentials = get.Credentials(args.user, args.passwd)
-        self.user, self.passwd = credentials.user, credentials.passwd
+        credentials = get.Credentials(args.username, args.password)
+        self.username = credentials.username
+        self.password = credentials.password
 
         quota = self._get_quota()
 
@@ -72,7 +74,7 @@ class Main(object):
     # ----------------------------------------------------------------
     def _get_quota(self):
         # Return the current quota info as a get.Quota instance.
-        info = get.LineInfo(self.user, self.passwd)
+        info = get.BroadbandInfo(self.username, self.password)
         return info.quota
 
     def _get_minimum_interval(self, remaining_time, remaining_quota):
@@ -145,10 +147,10 @@ if __name__ == '__main__':
         'update',
         description="Fetch internet usage/quota."
     )
-    parser_update.add_argument('--user', dest='user', type=str,
-                               default=None)
-    parser_update.add_argument('--pass', dest='passwd', type=str,
-                               default=None)
+    parser_update.add_argument('--username', dest='username',
+                               type=str, default=None)
+    parser_update.add_argument('--password', dest='password',
+                               type=str, default=None)
     parser_update.set_defaults(func=main.update)
 
     # Parser for the 'data' subcommand

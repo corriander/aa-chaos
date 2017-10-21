@@ -11,7 +11,7 @@ import requests
 import aachaos.store
 from aachaos.config import settings
 
-URL_CHAOS = 'https://chaos.aa.net.uk/'
+URL_CHAOS = 'https://chaos2.aa.net.uk/'
 
 
 class DatabaseEmptyException(Exception): pass
@@ -20,69 +20,57 @@ class DatabaseEmptyException(Exception): pass
 Quota = namedtuple('Quota', 'tstamp, rem, tot')
 
 
-class LineInfo(object):
-    """Adapter for the aa.net.uk clueless API.
+class BroadbandInfo(object):
+    """Encapsulates a broadband/info CHAOS API call."""
 
-    The API is subject to change at the time of writing.
-    """
+    class BadResponse(Exception): pass
 
-    class AuthenticationError(Exception): pass
-
-    def __init__(self, user, passwd):
-        self.xml = xml = self.fetch(user, passwd)
-        self.parse(xml)
+    def __init__(self, username=None, password=None):
+        self.auth = Credentials(username, password)
 
     @property
     def quota(self):
-        return self._quota
+        """Lazily evaluated quota information."""
+        try:
+            return self._quota
+        except AttributeError:
+            return self.parse(self.fetch())
 
-    def fetch(self, user, passwd):
-        """Fetch the XML and load content into a LineInfo object."""
-        response = requests.get('{}info'.format(URL_CHAOS),
-                                auth=(user, passwd))
-        xml = response.text
-        # TODO: Move the following into own function when refactoring.
-        root = ET.fromstring(xml)
-        if root.get('error'):
-            raise self.AuthenticationError("%s/%s" % (user, passwd))
-        return xml
+    def fetch(self):
+        """Fetch broadband/info JSON from the CHAOS API."""
+        response = requests.get('{}broadband/info'.format(URL_CHAOS),
+                                auth=self.auth)
 
-    def parse(self, xml):
-        """Parse line information contained in an XML string.
+        if response.status_code != 200:
+            raise self.BadResponse(
+                'HTTP {}'.format(response.status_code)
+            )
+
+        data = response.json()
+        if 'error' in data:
+            raise self.BadResponse('Error: {}'.format(data['error']))
+        return data
+
+    def parse(self, data):
+        """Parse broadband information contained in JSON structure.
 
         Method stores the content in local attributes (currently
         limited to a Quota object assigned to `_quota`).
         """
-        root = ET.fromstring(xml)
-
-        bb_lines = root.findall(
-            './/{{{}}}broadband'.format(URL_CHAOS)
-        )
-
-        if len(bb_lines) != 1:
+        if len(data['info']) != 1:
             msg = "No. broadband elements != 1"
             raise NotImplementedError(msg)
-
-        # We should now have an element with information stored as
-        # key:value attribute pairs.
-        element = bb_lines[0]
-        d = dict(element.items())
+        info = data['info'][0]
 
         # Create the quota object
         q_tstamp = datetime.strptime(
-            d['quota-time'],
+            info['quota_timestamp'],
             '%Y-%m-%d %H:%M:%S'
         )
-        q_left = int(d['quota-left']) # bytes
-        q_tot = int(d['quota-monthly']) # bytes
-        self._quota = Quota(q_tstamp, q_left, q_tot)
-
-    @classmethod
-    def credentials(cls, obj):
-        if not isinstance(obj, Credentials):
-            raise TypeError("Credentials object must be provided.")
-        else:
-            return cls(obj.user, obj.passwd)
+        q_left = int(info['quota_remaining']) # bytes
+        q_tot = int(info['quota_monthly']) # bytes
+        self._quota = quota = Quota(q_tstamp, q_left, q_tot)
+        return quota
 
 
 class DB(aachaos.store.DB):
@@ -121,13 +109,12 @@ class DB(aachaos.store.DB):
         return (self.dbdt_to_pydt(pair[0]), pair[1])
 
 
-class Credentials(object):
-    """Encapsulate authorisation/credentials functionality.
+class Credentials(requests.auth.HTTPBasicAuth):
+    """Encapsulate credentials for API authentication.
 
-    Credentials are either provided at runtime or retrieved from a
-    plain text file with a "secure" (600) local file (configured
-    separately). By default, instances assume the latter unless
-    credentials are explicitly provided.
+    Credentials are either provided explicitly at runtime or retrieved
+    from a plain text file with a "secure" (600) local file
+    (configured separately).
     """
 
     class FileNotPresent(RuntimeError): pass
@@ -135,15 +122,20 @@ class Credentials(object):
 
     auth_path = os.path.join(settings.xdg_config, __package__, 'auth')
 
-    def __init__(self, user=None, passwd=None):
-        if self._userpasswd_provided(user, passwd):
-            self.user, self.passwd = user, passwd
+    def __init__(self, username=None, password=None):
+        if self._validate_credentials(username, password):
+            self.username, self.password = username, password
         else:
-            self.user, self.passwd = self.retrieve()
+            self.username, self.password = self.retrieve()
 
     @staticmethod
-    def _userpasswd_provided(user, passwd):
-        return user is not None and passwd is not None
+    def _validate_credentials(username, password):
+        if username is not None and password is not None:
+            return True
+        elif username is not None:
+            raise ValueError("No password provided.")
+        elif password is not None:
+            raise ValueError("No username provided.")
 
     def _auth_file_present(self):
         return os.path.isfile(self.auth_path)

@@ -1,0 +1,67 @@
+{
+    "command": "info",
+    "info": [
+        {
+            "ID": "00000",
+            "login": "aa1001@a.1",
+            "postcode": "AB12 3CD",
+            "quota_monthly": "100000000000",
+            "quota_remaining": "3394211557",
+            "quota_timestamp": "2000-05-20 11:00:00",
+            "rx_rate": "19999000",
+            "tx_rate": "74282000"
+        }
+    ],
+    "options": [
+        {
+            "option": [
+                {
+                    "name": "control_login",
+                    "recheck": "true",
+                    "size": "14",
+                    "title": "Control login (e.g. something@a)",
+                    "type": "text",
+                    "value": "aa1001@a"
+                },
+                {
+                    "name": "control_password",
+                    "recheck": "true",
+                    "size": "10",
+                    "title": "Control password",
+                    "type": "hidden",
+                    "value": "APassword"
+                }
+            ],
+            "title": "Authentication"
+        },
+        {
+            "option": [
+                {
+                    "choice": [
+                        {
+                            "title": "Select service",
+                            "value": ""
+                        },
+                        {
+                            "title": "AB12 3CD aa1001@a.1",
+                            "value": "00000"
+                        }
+                    ],
+                    "name": "service",
+                    "recheck": "true",
+                    "title": "Service identifier",
+                    "type": "select"
+                }
+            ],
+            "title": "Service"
+        },
+        {
+            "title": "Service Details"
+        }
+    ],
+    "request": {
+        "control_login": "aa1001@a",
+        "control_password": "APassword"
+    },
+    "subsystem": "broadband"
+}
