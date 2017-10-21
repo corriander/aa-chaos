@@ -1,5 +1,6 @@
 """Module containing unit tests relating to fetching data."""
 
+import builtins
 import unittest
 import os
 import sqlite3
@@ -8,10 +9,11 @@ from datetime import datetime
 from collections import namedtuple
 
 from unittest.mock import patch
-from ddt import data, unpack, ddt as DDT
+from ddt import file_data, ddt
 import pandas
+import requests
 
-from aachaos.get import LineInfo, Quota, DB, History
+from aachaos.get import BroadbandInfo, Quota, DB, History, Credentials
 
 PATHD_TEST = os.path.dirname(__file__)
 PATHD_TESTDATA = os.path.join(PATHD_TEST, 'data')
@@ -136,6 +138,85 @@ class TestHistory(unittest.TestCase):
         history = History()
         usage = history.usage(units='B')
         self.assertIsInstance(usage, pandas.Series)
+
+
+@ddt
+class TestCredentials(unittest.TestCase):
+
+    def setUp(self):
+        Credentials.auth_path = os.path.join(PATHD_TESTDATA, 'auth')
+
+    def test_requests_compatibility(self):
+        """Instances are used like requests.auth.HTTPBasicAuth.
+
+        This test checks a well-formed instance is usable by requests
+        and key behaviour looks right (namely that a basic auth HTTP
+        header is added to the request when the instance is called).
+        """
+        auth = Credentials('TestingTerry', 'APassword')
+
+        request = requests.Request(url='https://google.com',
+                                   auth=auth)
+        prepared_request = request.prepare()
+        self.assertEqual(prepared_request.headers['Authorization'],
+                         'Basic VGVzdGluZ1RlcnJ5OkFQYXNzd29yZA==')
+
+    @file_data(
+        os.path.join(PATHD_TESTDATA, 'credentials_parameters.json')
+    )
+    def test___init__(self, test_data):
+        """Check instantiation of a Credentials object.
+
+        A username and password are either provided as arguments or
+        omitted, in which case the auth file is inspected.
+        """
+        expected = test_data['expected']
+
+        if 'error' in expected:
+            self.assertRaises(
+                getattr(builtins, expected['error']),
+                Credentials,
+                *test_data['args']
+            )
+
+        else:
+            inst = Credentials(*test_data['args'])
+            self.assertEqual(inst.username, expected['username'])
+            self.assertEqual(inst.password, expected['password'])
+
+    def test_auth_file_bad_permissions(self):
+        """Non-600 permissions should cause an exception."""
+        Credentials.auth_path = os.path.join(PATHD_TESTDATA,
+                                             'bad_auth')
+
+        self.assertRaises(
+            Credentials.FileNotSecure,
+            Credentials,
+            None,
+            None
+        )
+
+        # However, this shouldn't matter if we explicitly provide.
+        inst = Credentials('TestingTyra', 'AnotherPassword')
+        self.assertEqual(inst.username, 'TestingTyra')
+        self.assertEqual(inst.password, 'AnotherPassword')
+
+    def test_auth_file_not_present(self):
+        """An exception is raised if the auth file isn't present."""
+        Credentials.auth_path = os.path.join(PATHD_TESTDATA,
+                                             'non_existent_auth')
+
+        self.assertRaises(
+            Credentials.FileNotPresent,
+            Credentials,
+            None,
+            None
+        )
+
+        # However, this shouldn't matter if we explicitly provide.
+        inst = Credentials('TestingTyra', 'AnotherPassword')
+        self.assertEqual(inst.username, 'TestingTyra')
+        self.assertEqual(inst.password, 'AnotherPassword')
 
 
 if __name__ == '__main__':
