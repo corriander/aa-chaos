@@ -20,11 +20,8 @@ class DatabaseEmptyException(Exception): pass
 Quota = namedtuple('Quota', 'tstamp, rem, tot')
 
 
-class LineInfo(object):
-    """Adapter for the aa.net.uk clueless API.
-
-    The API is subject to change at the time of writing.
-    """
+class BroadbandInfo(object):
+    """Encapsulates a broadband/info CHAOS API call."""
 
     class AuthenticationError(Exception): pass
 
@@ -37,7 +34,7 @@ class LineInfo(object):
         return self._quota
 
     def fetch(self, user, passwd):
-        """Fetch the XML and load content into a LineInfo object."""
+        """Fetch the XML and load content into a BroadbandInfo object."""
         response = requests.get('{}info'.format(URL_CHAOS),
                                 auth=(user, passwd))
         xml = response.text

@@ -72,7 +72,7 @@ class Main(object):
     # ----------------------------------------------------------------
     def _get_quota(self):
         # Return the current quota info as a get.Quota instance.
-        info = get.LineInfo(self.user, self.passwd)
+        info = get.BroadbandInfo(self.user, self.passwd)
         return info.quota
 
     def _get_minimum_interval(self, remaining_time, remaining_quota):

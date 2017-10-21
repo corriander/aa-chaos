@@ -23,30 +23,31 @@ PATH_MINRESPONSE = os.path.join(
 )
 PATH_TESTDB = os.path.join(PATHD_TESTDATA, 'test_store.db')
 
-class TestLineInfo(unittest.TestCase):
-    """Check the functionality of the LineInfo class.
 
-    LineInfo encapsulates the API's XML response.
+class TestBroadbandInfo(unittest.TestCase):
+    """Check the functionality of the BroadbandInfo class.
+
+    BroadbandInfo encapsulates the API's XML response.
     """
     with open(PATH_MINRESPONSE, 'rb') as f:
         xml_minimal_response = f.read()
 
-    @patch('aachaos.get.LineInfo.parse')
-    @patch('aachaos.get.LineInfo.fetch')
+    @patch('aachaos.get.BroadbandInfo.parse')
+    @patch('aachaos.get.BroadbandInfo.fetch')
     def test___init__(self, mock_fetch, mock_parse):
         mock_fetch.return_value = self.xml_minimal_response
-        line_info = LineInfo('any user', 'any pass')
+        line_info = BroadbandInfo('any user', 'any pass')
 
         #import pdb; pdb.set_trace()
         mock_fetch.assert_called_with('any user', 'any pass')
         mock_parse.assert_called_with(mock_fetch.return_value)
 
-    @patch('aachaos.get.LineInfo.fetch')
+    @patch('aachaos.get.BroadbandInfo.fetch')
     def test_parse(self, mock_fetch):
         """Parse creates a Quota object at `_quota` as a side-effect.
         """
         mock_fetch.return_value = self.xml_minimal_response
-        line_info = LineInfo('any user', 'any pass')
+        line_info = BroadbandInfo('any user', 'any pass')
         self.assertIsInstance(line_info._quota, Quota)
         self.assertEqual(line_info._quota.rem, 3394211557)
 
