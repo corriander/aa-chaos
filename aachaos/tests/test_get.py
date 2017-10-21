@@ -10,7 +10,7 @@ from collections import namedtuple
 
 from unittest.mock import patch
 from ddt import file_data, ddt
-import pandas
+import pandas as pd
 import requests
 
 from aachaos.get import BroadbandInfo, Quota, DB, History, Credentials
@@ -73,7 +73,7 @@ class TestDB(unittest.TestCase):
     def test_select_from_quota_vw(self):
         """Returns contents of `quota_vw` as a DataFrame."""
         df = self.db.select_from_quota_vw()
-        self.assertIsInstance(df, pandas.DataFrame)
+        self.assertIsInstance(df, pd.DataFrame)
         self.assertEqual(len(df), 68)
 
     def test_select_last_from_quota_vw(self):
@@ -93,7 +93,7 @@ class TestHistory(unittest.TestCase):
     containing usage and quota history.
     """
 
-    df_quota_vw = pandas.DataFrame(
+    df_quota_vw = pd.DataFrame(
         columns=('remaining', 'total', 'percent'),
         data=[
             (98123456789, 100000000000, 98.12345679),
@@ -101,23 +101,23 @@ class TestHistory(unittest.TestCase):
             (99999999900, 100000000000, 99.9999999),
             (98000000000, 100000000000, 98)
         ],
-        index=pandas.DatetimeIndex(
+        index=pd.DatetimeIndex(
             ('2000-01-01 18:00', '2000-01-02 00:00',
              '2000-02-01 01:00', '2001-01-01 18:00'),
             name='timestamp'
         )
     )
 
-    ts_quota = pandas.Series(
+    ts_quota = pd.Series(
         (100, 100, 100),
-        index=pandas.PeriodIndex(
+        index=pd.PeriodIndex(
             ('2000-01', '2000-02', '2001-01'), freq='M'
         )
     )
 
-    ts_usage = pandas.Series(
+    ts_usage = pd.Series(
         (98123456789, 96987654321, 99999999900, 98000000000),
-        index=pandas.DatetimeIndex(
+        index=pd.DatetimeIndex(
             ('2000-01-01 18:00', '2000-01-02 00:00',
              '2000-02-01 01:00', '2001-01-01 18:00'),
         )
@@ -131,14 +131,14 @@ class TestHistory(unittest.TestCase):
         mock_select_from_quota_vw.return_value = self.df_quota_vw
         history = History()
         quota = history.quota(units='B')
-        self.assertIsInstance(quota, pandas.Series)
+        self.assertIsInstance(quota, pd.Series)
 
     def test_usage(self, mock_select_from_quota_vw):
         """Quota returns a time-series of quota remainder."""
         mock_select_from_quota_vw.return_value = self.df_quota_vw
         history = History()
         usage = history.usage(units='B')
-        self.assertIsInstance(usage, pandas.Series)
+        self.assertIsInstance(usage, pd.Series)
 
 
 @ddt
