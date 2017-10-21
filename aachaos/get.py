@@ -121,13 +121,12 @@ class DB(aachaos.store.DB):
         return (self.dbdt_to_pydt(pair[0]), pair[1])
 
 
-class Credentials(object):
-    """Encapsulate authorisation/credentials functionality.
+class Credentials(requests.auth.HTTPBasicAuth):
+    """Encapsulate credentials for API authentication.
 
-    Credentials are either provided at runtime or retrieved from a
-    plain text file with a "secure" (600) local file (configured
-    separately). By default, instances assume the latter unless
-    credentials are explicitly provided.
+    Credentials are either provided explicitly at runtime or retrieved
+    from a plain text file with a "secure" (600) local file
+    (configured separately).
     """
 
     class FileNotPresent(RuntimeError): pass
@@ -141,9 +140,25 @@ class Credentials(object):
         else:
             self.user, self.passwd = self.retrieve()
 
+    @property
+    def username(self):
+        # requests compatibility; .user is to be deprecated.
+        return self.user
+
+    @property
+    def password(self):
+        # requests compatibility; .passwd is to be deprecated.
+        return self.passwd
+
     @staticmethod
     def _userpasswd_provided(user, passwd):
-        return user is not None and passwd is not None
+
+        if user is not None and passwd is not None:
+            return True
+        elif user is not None:
+            raise ValueError("No password provided.")
+        elif passwd is not None:
+            raise ValueError("No username provided.")
 
     def _auth_file_present(self):
         return os.path.isfile(self.auth_path)
