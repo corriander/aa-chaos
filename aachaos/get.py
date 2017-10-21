@@ -11,7 +11,7 @@ import requests
 import aachaos.store
 from aachaos.config import settings
 
-URL_CHAOS = 'https://chaos.aa.net.uk/'
+URL_CHAOS = 'https://chaos2.aa.net.uk/'
 
 
 class DatabaseEmptyException(Exception): pass
@@ -23,63 +23,54 @@ Quota = namedtuple('Quota', 'tstamp, rem, tot')
 class BroadbandInfo(object):
     """Encapsulates a broadband/info CHAOS API call."""
 
-    class AuthenticationError(Exception): pass
+    class BadResponse(Exception): pass
 
-    def __init__(self, user, passwd):
-        self.xml = xml = self.fetch(user, passwd)
-        self.parse(xml)
+    def __init__(self, user=None, passwd=None):
+        self.auth = Credentials(user, passwd)
 
     @property
     def quota(self):
-        return self._quota
+        """Lazily evaluated quota information."""
+        try:
+            return self._quota
+        except AttributeError:
+            return self.parse(self.fetch())
 
-    def fetch(self, user, passwd):
-        """Fetch the XML and load content into a BroadbandInfo object."""
-        response = requests.get('{}info'.format(URL_CHAOS),
-                                auth=(user, passwd))
-        xml = response.text
-        # TODO: Move the following into own function when refactoring.
-        root = ET.fromstring(xml)
-        if root.get('error'):
-            raise self.AuthenticationError("%s/%s" % (user, passwd))
-        return xml
+    def fetch(self):
+        """Fetch broadband/info JSON from the CHAOS API."""
+        response = requests.get('{}broadband/info'.format(URL_CHAOS),
+                                auth=self.auth)
 
-    def parse(self, xml):
-        """Parse line information contained in an XML string.
+        if response.status_code != 200:
+            raise self.BadResponse(
+                'HTTP {}'.format(response.status_code)
+            )
+
+        data = response.json()
+        if 'error' in data:
+            raise self.BadResponse('Error: {}'.format(data['error']))
+        return data
+
+    def parse(self, data):
+        """Parse broadband information contained in JSON structure.
 
         Method stores the content in local attributes (currently
         limited to a Quota object assigned to `_quota`).
         """
-        root = ET.fromstring(xml)
-
-        bb_lines = root.findall(
-            './/{{{}}}broadband'.format(URL_CHAOS)
-        )
-
-        if len(bb_lines) != 1:
+        if len(data['info']) != 1:
             msg = "No. broadband elements != 1"
             raise NotImplementedError(msg)
-
-        # We should now have an element with information stored as
-        # key:value attribute pairs.
-        element = bb_lines[0]
-        d = dict(element.items())
+        info = data['info'][0]
 
         # Create the quota object
         q_tstamp = datetime.strptime(
-            d['quota-time'],
+            info['quota_timestamp'],
             '%Y-%m-%d %H:%M:%S'
         )
-        q_left = int(d['quota-left']) # bytes
-        q_tot = int(d['quota-monthly']) # bytes
-        self._quota = Quota(q_tstamp, q_left, q_tot)
-
-    @classmethod
-    def credentials(cls, obj):
-        if not isinstance(obj, Credentials):
-            raise TypeError("Credentials object must be provided.")
-        else:
-            return cls(obj.user, obj.passwd)
+        q_left = int(info['quota_remaining']) # bytes
+        q_tot = int(info['quota_monthly']) # bytes
+        self._quota = quota = Quota(q_tstamp, q_left, q_tot)
+        return quota
 
 
 class DB(aachaos.store.DB):

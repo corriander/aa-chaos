@@ -1,6 +1,7 @@
 """Module containing unit tests relating to fetching data."""
 
 import builtins
+import json
 import unittest
 import os
 import sqlite3
@@ -8,7 +9,7 @@ import tempfile
 from datetime import datetime
 from collections import namedtuple
 
-from unittest.mock import patch
+from unittest import mock
 from ddt import file_data, ddt
 import pandas as pd
 import requests
@@ -22,6 +23,27 @@ PATH_MINRESPONSE = os.path.join(
     'dummy_minimal_response.xml'
 )
 PATH_TESTDB = os.path.join(PATHD_TESTDATA, 'test_store.db')
+SAMPLE_BROADBAND_INFO_RESPONSE_PATH = os.path.join(
+    PATHD_TESTDATA,
+    'sample_broadband_info_response.json'
+)
+with open(SAMPLE_BROADBAND_INFO_RESPONSE_PATH) as f:
+    SAMPLE_BROADBAND_INFO_RESPONSE = json.load(f)
+
+
+def mock_requests_get(*args, **kwargs):
+    class MockResponse(object):
+        def __init__(self):
+            self.status_code = 200
+
+        @property
+        def content(self):
+            return json.dumps(self.json)
+
+        def json(self):
+            return SAMPLE_BROADBAND_INFO_RESPONSE
+
+    return MockResponse()
 
 
 class TestBroadbandInfo(unittest.TestCase):
@@ -32,24 +54,65 @@ class TestBroadbandInfo(unittest.TestCase):
     with open(PATH_MINRESPONSE, 'rb') as f:
         xml_minimal_response = f.read()
 
-    @patch('aachaos.get.BroadbandInfo.parse')
-    @patch('aachaos.get.BroadbandInfo.fetch')
-    def test___init__(self, mock_fetch, mock_parse):
-        mock_fetch.return_value = self.xml_minimal_response
-        line_info = BroadbandInfo('any user', 'any pass')
+    def test___init__(self):
+        inst = BroadbandInfo('any user', 'any pass')
+        self.assertEqual(inst.auth.username, 'any user')
+        self.assertEqual(inst.auth.password, 'any pass')
 
-        #import pdb; pdb.set_trace()
-        mock_fetch.assert_called_with('any user', 'any pass')
-        mock_parse.assert_called_with(mock_fetch.return_value)
+    @mock.patch('aachaos.get.BroadbandInfo.fetch')
+    @mock.patch('aachaos.get.BroadbandInfo.parse')
+    def test_quota(self, mock_parse, mock_fetch):
+        """Lazy property fetching the quota info on demand.
 
-    @patch('aachaos.get.BroadbandInfo.fetch')
-    def test_parse(self, mock_fetch):
+        Creation of the quota object is in parse, hence is tested
+        there.
+        """
+        inst = BroadbandInfo('any user', 'any pass')
+
+        mock_fetch.assert_not_called()
+        mock_parse.assert_not_called()
+        mock_quota = mock.Mock()
+        mock_fetch.return_value = SAMPLE_BROADBAND_INFO_RESPONSE
+        mock_parse.return_value = mock_quota
+
+        self.assertIs(inst.quota, mock_quota)
+
+        mock_fetch.assert_called()
+        mock_parse.assert_called_with(SAMPLE_BROADBAND_INFO_RESPONSE)
+
+    def test_parse(self):
         """Parse creates a Quota object at `_quota` as a side-effect.
         """
-        mock_fetch.return_value = self.xml_minimal_response
-        line_info = BroadbandInfo('any user', 'any pass')
-        self.assertIsInstance(line_info._quota, Quota)
-        self.assertEqual(line_info._quota.rem, 3394211557)
+        inst = BroadbandInfo()
+
+        # Pre-check to ensure we parse is responsible for creating the
+        # _quota attribute.
+        self.assertRaises(AttributeError, getattr, inst, '_quota')
+
+        inst.parse(SAMPLE_BROADBAND_INFO_RESPONSE)
+
+        # Inspect the _quota attribute.
+        self.assertIsInstance(inst._quota, Quota)
+        self.assertEqual(inst._quota.rem, 3394211557)
+        self.assertEqual(inst._quota.tot, 100000000000)
+        self.assertEqual(inst._quota.tstamp,
+                         datetime(2000, 5, 20, 11, 0, 0))
+
+    @mock.patch('requests.get', side_effect=mock_requests_get)
+    def test_fetch(self, mock_get):
+        """Given Credentials, fetch returns the call response."""
+        inst = BroadbandInfo()
+        response_data = inst.fetch()
+
+        # Check requests.get is invoked as expected
+        mock_get.assert_called_with(
+            'https://chaos2.aa.net.uk/broadband/info',
+            auth=inst.auth
+        )
+
+        # Check response handling.
+        self.assertEqual(response_data,
+                         SAMPLE_BROADBAND_INFO_RESPONSE)
 
 
 class TestDB(unittest.TestCase):
@@ -85,7 +148,7 @@ class TestDB(unittest.TestCase):
         self.assertEqual(t[1], 98)
 
 
-@patch('aachaos.get.DB.select_from_quota_vw')
+@mock.patch('aachaos.get.DB.select_from_quota_vw')
 class TestHistory(unittest.TestCase):
     """Exercise the History data-retrieval class.
 
