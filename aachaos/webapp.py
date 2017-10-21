@@ -3,6 +3,7 @@ import os
 import tornado.ioloop
 import tornado.web
 
+from aachaos import vis
 from aachaos.config import settings
 
 
@@ -18,15 +19,13 @@ class QuasiStaticHandler(tornado.web.StaticFileHandler):
 
 def make_app():
     return tornado.web.Application([
-        # The fig could be mapped to e.g. server:port/netquota with
-        # r'/netquota()'
-        (r'/()', QuasiStaticHandler, {'path': FIG_PATH}),
+        (r'/netquota()', QuasiStaticHandler, {'path': FIG_PATH}),
     ])
 
 
 def create_figure():
     plotter = vis.Plotter()
-    plotter.plot_month()
+    plotter.plot_month(fpath=FIG_PATH)
 
 
 if __name__ == "__main__":
