@@ -59,7 +59,7 @@ class TestMain(unittest.TestCase):
         mock_call.return_value = quota
         mock_check.return_value = True
 
-        args = namedtuple('Args', 'user, passwd')('a user', 'a pass')
+        args = namedtuple('Args', 'username, password')('a user', 'a pass')
         self.main.update(args)
         mock_insert.assert_called_with(*quota)
         mock_plot.assert_called_with(
